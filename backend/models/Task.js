@@ -48,7 +48,7 @@ const taskSchema = new mongoose.Schema(
     },
   },
   {
-    timestamps: true, // Automatically manages createdAt and updatedAt
+    timestamps: true, 
   }
 );
 

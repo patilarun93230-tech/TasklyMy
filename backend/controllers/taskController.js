@@ -1,8 +1,6 @@
 const Task = require('../models/Task');
 
-// @desc    Create a new task
-// @route   POST /api/tasks
-// @access  Private
+
 const createTask = async (req, res) => {
   try {
     const { title, description, priority, status, category, dueDate } = req.body;
@@ -38,9 +36,7 @@ const createTask = async (req, res) => {
   }
 };
 
-// @desc    Get all tasks with search, filter, sort, and pagination
-// @route   GET /api/tasks
-// @access  Private
+
 const getTasks = async (req, res) => {
   try {
     const page = parseInt(req.query.page, 10) || 1;
@@ -49,7 +45,7 @@ const getTasks = async (req, res) => {
 
     const query = { createdBy: req.user._id };
 
-    // Search filter (matches title or description case-insensitively)
+   
     if (req.query.search) {
       query.$or = [
         { title: { $regex: req.query.search, $options: 'i' } },
@@ -57,28 +53,26 @@ const getTasks = async (req, res) => {
       ];
     }
 
-    // Filter by Status
+
     if (req.query.status) {
       query.status = req.query.status;
     }
 
-    // Filter by Category
     if (req.query.category) {
       query.category = req.query.category;
     }
 
-    // Filter by Priority
+   
     if (req.query.priority) {
       query.priority = req.query.priority;
     }
 
-    // Determine custom sorting logic
+
     const sortBy = req.query.sortBy || 'createdAt';
     const sortOrder = req.query.sortOrder === 'asc' ? 1 : -1;
 
     let aggregationPipeline = [{ $match: query }];
 
-    // If sorting by priority, project priority level weight: High=3, Medium=2, Low=1
     if (sortBy === 'priority') {
       aggregationPipeline.push({
         $addFields: {
@@ -96,7 +90,7 @@ const getTasks = async (req, res) => {
       });
       aggregationPipeline.push({ $sort: { priorityWeight: sortOrder, createdAt: -1 } });
     } else if (sortBy === 'dueDate') {
-      // Handle sorting by due date, pushing null due dates to the end
+     
       aggregationPipeline.push({
         $addFields: {
           hasDueDate: { $cond: [{ $eq: ['$dueDate', null] }, 0, 1] },
@@ -106,14 +100,13 @@ const getTasks = async (req, res) => {
         $sort: { hasDueDate: -1, dueDate: sortOrder, createdAt: -1 },
       });
     } else {
-      // Default sorting (usually createdAt)
+   
       aggregationPipeline.push({ $sort: { [sortBy]: sortOrder } });
     }
 
-    // Count matching documents before paginating
     const total = await Task.countDocuments(query);
 
-    // Apply pagination
+  
     aggregationPipeline.push({ $skip: skip });
     aggregationPipeline.push({ $limit: limit });
 
@@ -140,9 +133,7 @@ const getTasks = async (req, res) => {
   }
 };
 
-// @desc    Get a single task by ID
-// @route   GET /api/tasks/:id
-// @access  Private
+
 const getTaskById = async (req, res) => {
   try {
     const task = await Task.findOne({
@@ -171,9 +162,7 @@ const getTaskById = async (req, res) => {
   }
 };
 
-// @desc    Update a task
-// @route   PUT /api/tasks/:id
-// @access  Private
+
 const updateTask = async (req, res) => {
   try {
     let task = await Task.findOne({
@@ -207,9 +196,6 @@ const updateTask = async (req, res) => {
   }
 };
 
-// @desc    Delete a task
-// @route   DELETE /api/tasks/:id
-// @access  Private
 const deleteTask = async (req, res) => {
   try {
     const task = await Task.findOne({
@@ -240,14 +226,12 @@ const deleteTask = async (req, res) => {
   }
 };
 
-// @desc    Get dashboard statistics for charts and counters
-// @route   GET /api/tasks/stats
-// @access  Private
+
 const getTaskStats = async (req, res) => {
   try {
     const userId = req.user._id;
 
-    // Run parallel count aggregations
+    
     const stats = await Task.aggregate([
       { $match: { createdBy: userId } },
       {
@@ -266,12 +250,12 @@ const getTaskStats = async (req, res) => {
       }
     ]);
 
-    // Format output data cleanly
+   
     const formattedStats = {
       total: stats[0].totalTasks[0]?.count || 0,
       status: {
         Pending: 0,
-        InProgress: 0, // In Progress inside the DB is 'In Progress'
+        InProgress: 0, 
         Completed: 0
       },
       priority: {
@@ -286,21 +270,20 @@ const getTaskStats = async (req, res) => {
       }
     };
 
-    // Parse status counts
+
     stats[0].byStatus.forEach((item) => {
       if (item._id === 'Pending') formattedStats.status.Pending = item.count;
       if (item._id === 'In Progress') formattedStats.status.InProgress = item.count;
       if (item._id === 'Completed') formattedStats.status.Completed = item.count;
     });
 
-    // Parse priority counts
+
     stats[0].byPriority.forEach((item) => {
       if (item._id === 'Low') formattedStats.priority.Low = item.count;
       if (item._id === 'Medium') formattedStats.priority.Medium = item.count;
       if (item._id === 'High') formattedStats.priority.High = item.count;
     });
 
-    // Parse category counts
     stats[0].byCategory.forEach((item) => {
       if (item._id === 'Personal') formattedStats.category.Personal = item.count;
       if (item._id === 'Work') formattedStats.category.Work = item.count;

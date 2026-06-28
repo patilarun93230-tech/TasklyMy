@@ -26,7 +26,7 @@ const userSchema = new mongoose.Schema(
     },
   },
   {
-    timestamps: true, // This automatically handles createdAt and updatedAt
+    timestamps: true, 
   }
 );
 
@@ -44,7 +44,7 @@ userSchema.pre('save', async function (next) {
   }
 });
 
-// Compare entered password with hashed password in database
+
 userSchema.methods.matchPassword = async function (enteredPassword) {
   return await bcrypt.compare(enteredPassword, this.password);
 };
